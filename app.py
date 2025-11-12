@@ -1819,6 +1819,135 @@ def admin_get_logs():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+# Admin paneli için static dosya servisi
+# Render.com için: admin klasörü backend klasörü içinde olmalı
+# Önce backend/admin dizinini kontrol et (Render.com için)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+admin_dir = os.path.join(current_dir, 'admin')
+
+# Eğer backend/admin yoksa, bir üst dizindeki admin'i kontrol et (local için)
+if not os.path.exists(admin_dir):
+    parent_dir = os.path.dirname(current_dir)
+    admin_dir = os.path.join(parent_dir, 'admin')
+
+# Mutlak yola çevir
+admin_dir = os.path.abspath(admin_dir)
+
+# Admin dizini kontrolü (modül yüklendiğinde bir kez çalışır)
+print("=" * 60)
+print("ADMIN PANEL KONTROL")
+print("=" * 60)
+print(f"Mevcut dizin: {current_dir}")
+print(f"Admin dizini: {admin_dir}")
+print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+
+if os.path.exists(admin_dir):
+    files = os.listdir(admin_dir)
+    print(f"Admin dizinindeki dosyalar: {files}")
+    if 'index.html' in files:
+        print("✅ index.html bulundu!")
+    else:
+        print("❌ index.html BULUNAMADI!")
+    if 'app.js' in files:
+        print("✅ app.js bulundu!")
+    else:
+        print("❌ app.js BULUNAMADI!")
+else:
+    print(f"❌ UYARI: Admin dizini bulunamadı!")
+    print(f"   Kontrol edilen yollar:")
+    print(f"   1. {os.path.join(current_dir, 'admin')}")
+    print(f"   2. {os.path.join(os.path.dirname(current_dir), 'admin')}")
+print("=" * 60)
+
+# Admin route'ları (modül seviyesinde - Render.com'da çalışması için)
+@app.route('/admin')
+def admin_index():
+    """Admin paneli ana sayfası"""
+    try:
+        print(f"Admin index isteği alındı. Admin dizini: {admin_dir}")
+        print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+        
+        if not os.path.exists(admin_dir):
+            error_msg = f"Admin dizini bulunamadı: {admin_dir}"
+            print(f"ERROR: {error_msg}")
+            return jsonify({'error': error_msg}), 404
+        
+        index_path = os.path.join(admin_dir, 'index.html')
+        print(f"Index.html yolu: {index_path}")
+        print(f"Index.html mevcut mu: {os.path.exists(index_path)}")
+        
+        if not os.path.exists(index_path):
+            error_msg = f"index.html bulunamadı: {index_path}"
+            print(f"ERROR: {error_msg}")
+            # Admin dizinindeki dosyaları listele
+            if os.path.exists(admin_dir):
+                files = os.listdir(admin_dir)
+                print(f"Admin dizinindeki dosyalar: {files}")
+            return jsonify({'error': error_msg}), 404
+        
+        print(f"Admin index.html gönderiliyor...")
+        return send_from_directory(admin_dir, 'index.html', mimetype='text/html')
+    except Exception as e:
+        error_msg = f"Admin index hatası: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/admin/<path:filename>')
+def admin_static(filename):
+    """Admin paneli static dosyaları (JS, CSS, vs.)"""
+    try:
+        print(f"Admin static dosya isteği: {filename}")
+        print(f"Admin dizini: {admin_dir}")
+        print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+        
+        if not os.path.exists(admin_dir):
+            error_msg = f"Admin dizini bulunamadı: {admin_dir}"
+            print(f"ERROR: {error_msg}")
+            return jsonify({'error': error_msg}), 404
+        
+        file_path = os.path.join(admin_dir, filename)
+        print(f"Dosya yolu: {file_path}")
+        print(f"Dosya mevcut mu: {os.path.exists(file_path)}")
+        
+        if not os.path.exists(file_path):
+            # Admin dizinindeki dosyaları listele
+            if os.path.exists(admin_dir):
+                files = os.listdir(admin_dir)
+                print(f"Admin dizinindeki dosyalar: {files}")
+            error_msg = f"Dosya bulunamadı: {filename} (yol: {file_path})"
+            print(f"ERROR: {error_msg}")
+            return jsonify({'error': error_msg}), 404
+        
+        # MIME type belirle
+        if filename.endswith('.js'):
+            mimetype = 'application/javascript'
+        elif filename.endswith('.css'):
+            mimetype = 'text/css'
+        elif filename.endswith('.html'):
+            mimetype = 'text/html'
+        elif filename.endswith('.json'):
+            mimetype = 'application/json'
+        elif filename.endswith('.png'):
+            mimetype = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mimetype = 'image/jpeg'
+        elif filename.endswith('.svg'):
+            mimetype = 'image/svg+xml'
+        else:
+            mimetype = None
+        
+        print(f"Dosya gönderiliyor: {filename} (mimetype: {mimetype})")
+        return send_from_directory(admin_dir, filename, mimetype=mimetype)
+    except Exception as e:
+        error_msg = f"Admin static dosya hatası: {str(e)}, dosya: {filename}"
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
+
+# Development modu (sadece doğrudan çalıştırıldığında)
 if __name__ == '__main__':
     init_db()
     
@@ -1862,153 +1991,27 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Ornek besin ekleme hatasi: {e}")
     
-    # Admin paneli için static dosya servisi
-    # Render.com için: admin klasörü backend klasörü içinde olmalı
-    # Önce backend/admin dizinini kontrol et (Render.com için)
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    admin_dir = os.path.join(current_dir, 'admin')
-    
-    # Eğer backend/admin yoksa, bir üst dizindeki admin'i kontrol et (local için)
-    if not os.path.exists(admin_dir):
-        parent_dir = os.path.dirname(current_dir)
-        admin_dir = os.path.join(parent_dir, 'admin')
-    
-    # Mutlak yola çevir
-    admin_dir = os.path.abspath(admin_dir)
+    # Production modu kontrolü
+    # Render.com için: FLASK_DEBUG = False (production)
+    # Local için: FLASK_DEBUG = True (development)
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    port = int(os.getenv('PORT', 5000))  # Render.com otomatik port atar
+    host = os.getenv('HOST', '0.0.0.0')  # 0.0.0.0 = tüm ağ arayüzlerinde dinle
     
     print("=" * 60)
-    print("ADMIN PANEL KONTROL")
+    print("Diyet Takip - Backend API")
     print("=" * 60)
-    print(f"Mevcut dizin: {current_dir}")
-    print(f"Admin dizini: {admin_dir}")
-    print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
-    
-    if os.path.exists(admin_dir):
-        files = os.listdir(admin_dir)
-        print(f"Admin dizinindeki dosyalar: {files}")
-        if 'index.html' in files:
-            print("✅ index.html bulundu!")
-        else:
-            print("❌ index.html BULUNAMADI!")
-        if 'app.js' in files:
-            print("✅ app.js bulundu!")
-        else:
-            print("❌ app.js BULUNAMADI!")
-    else:
-        print(f"❌ UYARI: Admin dizini bulunamadı!")
-        print(f"   Kontrol edilen yollar:")
-        print(f"   1. {os.path.join(current_dir, 'admin')}")
-        print(f"   2. {os.path.join(os.path.dirname(current_dir), 'admin')}")
+    print(f"Mode: {'Development' if debug_mode else 'Production'}")
+    print(f"API: http://localhost:{port}")
+    print(f"API: http://127.0.0.1:{port}")
+    print(f"Health Check: http://localhost:{port}/api/health")
+    print(f"Admin Panel: http://localhost:{port}/admin")
+    print(f"Database: {DB_NAME}")
     print("=" * 60)
-    
-    @app.route('/admin')
-    def admin_index():
-        """Admin paneli ana sayfası"""
-        try:
-            print(f"Admin index isteği alındı. Admin dizini: {admin_dir}")
-            print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
-            
-            if not os.path.exists(admin_dir):
-                error_msg = f"Admin dizini bulunamadı: {admin_dir}"
-                print(f"ERROR: {error_msg}")
-                return jsonify({'error': error_msg}), 404
-            
-            index_path = os.path.join(admin_dir, 'index.html')
-            print(f"Index.html yolu: {index_path}")
-            print(f"Index.html mevcut mu: {os.path.exists(index_path)}")
-            
-            if not os.path.exists(index_path):
-                error_msg = f"index.html bulunamadı: {index_path}"
-                print(f"ERROR: {error_msg}")
-                # Admin dizinindeki dosyaları listele
-                if os.path.exists(admin_dir):
-                    files = os.listdir(admin_dir)
-                    print(f"Admin dizinindeki dosyalar: {files}")
-                return jsonify({'error': error_msg}), 404
-            
-            print(f"Admin index.html gönderiliyor...")
-            return send_from_directory(admin_dir, 'index.html', mimetype='text/html')
-        except Exception as e:
-            error_msg = f"Admin index hatası: {str(e)}"
-            print(f"ERROR: {error_msg}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({'error': error_msg}), 500
-    
-    @app.route('/admin/<path:filename>')
-    def admin_static(filename):
-        """Admin paneli static dosyaları (JS, CSS, vs.)"""
-        try:
-            print(f"Admin static dosya isteği: {filename}")
-            print(f"Admin dizini: {admin_dir}")
-            print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
-            
-            if not os.path.exists(admin_dir):
-                error_msg = f"Admin dizini bulunamadı: {admin_dir}"
-                print(f"ERROR: {error_msg}")
-                return jsonify({'error': error_msg}), 404
-            
-            file_path = os.path.join(admin_dir, filename)
-            print(f"Dosya yolu: {file_path}")
-            print(f"Dosya mevcut mu: {os.path.exists(file_path)}")
-            
-            if not os.path.exists(file_path):
-                # Admin dizinindeki dosyaları listele
-                if os.path.exists(admin_dir):
-                    files = os.listdir(admin_dir)
-                    print(f"Admin dizinindeki dosyalar: {files}")
-                error_msg = f"Dosya bulunamadı: {filename} (yol: {file_path})"
-                print(f"ERROR: {error_msg}")
-                return jsonify({'error': error_msg}), 404
-            
-            # MIME type belirle
-            if filename.endswith('.js'):
-                mimetype = 'application/javascript'
-            elif filename.endswith('.css'):
-                mimetype = 'text/css'
-            elif filename.endswith('.html'):
-                mimetype = 'text/html'
-            elif filename.endswith('.json'):
-                mimetype = 'application/json'
-            elif filename.endswith('.png'):
-                mimetype = 'image/png'
-            elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-                mimetype = 'image/jpeg'
-            elif filename.endswith('.svg'):
-                mimetype = 'image/svg+xml'
-            else:
-                mimetype = None
-            
-            print(f"Dosya gönderiliyor: {filename} (mimetype: {mimetype})")
-            return send_from_directory(admin_dir, filename, mimetype=mimetype)
-        except Exception as e:
-            error_msg = f"Admin static dosya hatası: {str(e)}, dosya: {filename}"
-            print(f"ERROR: {error_msg}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({'error': error_msg}), 500
-    
-        # Production modu kontrolü
-        # Render.com için: FLASK_DEBUG = False (production)
-        # Local için: FLASK_DEBUG = True (development)
-        debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-        port = int(os.getenv('PORT', 5000))  # Render.com otomatik port atar
-        host = os.getenv('HOST', '0.0.0.0')  # 0.0.0.0 = tüm ağ arayüzlerinde dinle
-        
-        print("=" * 60)
-        print("Diyet Takip - Backend API")
-        print("=" * 60)
-        print(f"Mode: {'Development' if debug_mode else 'Production'}")
-        print(f"API: http://localhost:{port}")
-        print(f"API: http://127.0.0.1:{port}")
-        print(f"Health Check: http://localhost:{port}/api/health")
-        print(f"Admin Panel: http://localhost:{port}/admin")
-        print(f"Database: {DB_NAME}")
-        print("=" * 60)
-        print("⚠️  ÖNEMLİ: Mobil uygulamadan bağlanmak için IP adresini kullan!")
-        print("   IP adresini öğrenmek için: ipconfig (Windows) veya ifconfig (Mac/Linux)")
-        print("   Örnek: http://192.168.1.6:5000")
-        print("=" * 60)
-        print("Backend baslatildi! Mobil uygulamayi baslatabilirsiniz.")
-        print("=" * 60)
-        app.run(debug=debug_mode, host=host, port=port)
+    print("⚠️  ÖNEMLİ: Mobil uygulamadan bağlanmak için IP adresini kullan!")
+    print("   IP adresini öğrenmek için: ipconfig (Windows) veya ifconfig (Mac/Linux)")
+    print("   Örnek: http://192.168.1.6:5000")
+    print("=" * 60)
+    print("Backend baslatildi! Mobil uygulamayi baslatabilirsiniz.")
+    print("=" * 60)
+    app.run(debug=debug_mode, host=host, port=port)

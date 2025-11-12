@@ -66,16 +66,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Login screen göster
 function showLoginScreen() {
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('adminPanel').classList.add('hidden');
 }
 
+// Admin panel göster
 function showAdminPanel() {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');
 }
 
+// Logout
+function logout() {
+    localStorage.removeItem('adminToken');
+    authToken = null;
+    showLoginScreen();
+}
+
+// Section göster
+function showSection(section) {
+    // Tüm section'ları gizle
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    // Tüm nav link'leri deaktif et
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    // Seçilen section'ı göster
+    document.getElementById(section + 'Section').classList.remove('hidden');
+    // Seçilen nav link'i aktif et
+    event.target.classList.add('active');
+    
+    // Section'a göre veri yükle
+    if (section === 'dashboard') {
+        loadDashboard();
+    } else if (section === 'users') {
+        loadUsers(1);
+    } else if (section === 'foods') {
+        loadFoods(1);
+    } else if (section === 'logs') {
+        loadLogs(1);
+    }
+}
+
+// Login handler
 function handleLogin(e) {
     e.preventDefault();
     console.log('Giriş butonu tıklandı');
@@ -149,48 +182,7 @@ function handleLogin(e) {
     });
 }
 
-function logout() {
-    authToken = null;
-    localStorage.removeItem('adminToken');
-    showLoginScreen();
-}
-
-function showSection(section) {
-    console.log('Section değiştiriliyor:', section);
-    // Hide all sections
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-    
-    // Show selected section
-    const sectionElement = document.getElementById(section + 'Section');
-    if (sectionElement) {
-        sectionElement.classList.remove('hidden');
-        
-        // Section'a göre veri yükle
-        if (section === 'users') {
-            console.log('Kullanıcılar yükleniyor...');
-            loadUsers(1);
-        } else if (section === 'foods') {
-            console.log('Besinler yükleniyor...');
-            loadFoods(1);
-        } else if (section === 'logs') {
-            console.log('Loglar yükleniyor...');
-            loadLogs(1);
-        }
-    } else {
-        console.error('Section bulunamadı:', section + 'Section');
-    }
-    
-    // Active nav link'i bul ve işaretle
-    const navLinks = document.querySelectorAll('.nav-link');
-    navLinks.forEach(link => {
-        if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(`'${section}'`)) {
-            link.classList.add('active');
-        }
-    });
-}
-
-// Dashboard
+// Dashboard yükle
 function loadDashboard() {
     fetch(`${API_BASE_URL}/admin/stats`, {
         headers: {
@@ -205,76 +197,39 @@ function loadDashboard() {
             }
             return;
         }
-        displayStats(data);
-        drawActivityChart(data.activity_data);
+        document.getElementById('totalUsers').textContent = data.total_users || 0;
+        document.getElementById('totalFoods').textContent = data.total_foods || 0;
+        document.getElementById('todayLogs').textContent = data.today_logs || 0;
+        document.getElementById('activeUsers').textContent = data.active_users || 0;
+        drawActivityChart(data.activity_data || []);
     })
     .catch(error => {
         console.error('Dashboard yükleme hatası:', error);
     });
 }
 
-function displayStats(data) {
-    const statsContainer = document.getElementById('statsContainer');
-    statsContainer.innerHTML = `
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="icon users">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3>${data.total_users}</h3>
-                <p>Toplam Kullanıcı</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="icon active">
-                    <i class="fas fa-user-check"></i>
-                </div>
-                <h3>${data.active_users}</h3>
-                <p>Aktif Kullanıcı (30 gün)</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="icon foods">
-                    <i class="fas fa-utensils"></i>
-                </div>
-                <h3>${data.total_foods}</h3>
-                <p>Toplam Besin</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="icon logs">
-                    <i class="fas fa-list"></i>
-                </div>
-                <h3>${data.today_logs}</h3>
-                <p>Bugünkü Log</p>
-            </div>
-        </div>
-    `;
-}
-
-function drawActivityChart(activityData) {
-    const ctx = document.getElementById('activityChart').getContext('2d');
+// Activity chart çiz
+function drawActivityChart(data) {
+    const ctx = document.getElementById('activityChart');
+    if (!ctx) return;
     
     if (activityChart) {
         activityChart.destroy();
     }
-
-    const labels = activityData.map(item => {
-        const date = new Date(item.date);
+    
+    const labels = data.map(d => {
+        const date = new Date(d.date);
         return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
     });
-    const data = activityData.map(item => item.count);
-
+    const counts = data.map(d => d.count);
+    
     activityChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Aktif Kullanıcı Sayısı',
-                data: data,
+                data: counts,
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
                 tension: 0.4,
@@ -283,7 +238,7 @@ function drawActivityChart(activityData) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: true
@@ -298,96 +253,85 @@ function drawActivityChart(activityData) {
     });
 }
 
-// Users
-let currentUsersPage = 1;
+// Kullanıcıları yükle
 function loadUsers(page = 1) {
-    console.log('loadUsers çağrıldı, sayfa:', page);
-    currentUsersPage = page;
     const search = document.getElementById('userSearch')?.value || '';
+    const url = `${API_BASE_URL}/admin/users?page=${page}&limit=20${search ? `&search=${encodeURIComponent(search)}` : ''}`;
     
-    const tbody = document.getElementById('usersTableBody');
-    if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></td></tr>';
-    }
+    document.getElementById('usersTable').innerHTML = '<div class="loading"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></div>';
     
-    fetch(`${API_BASE_URL}/admin/users?page=${page}&limit=20`, {
+    fetch(url, {
         headers: {
             'Authorization': `Bearer ${authToken}`
         }
     })
-    .then(response => {
-        console.log('Kullanıcılar response status:', response.status);
-        if (!response.ok) {
-            return response.json().then(err => {
-                throw new Error(err.error || 'Kullanıcılar yüklenemedi');
-            });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Kullanıcılar data:', data);
         if (data.error) {
             if (data.error === 'Yetkisiz erişim') {
                 logout();
-                return;
             }
-            alert('Hata: ' + data.error);
             return;
         }
-        if (data.users) {
-            displayUsers(data.users);
-            displayUsersPagination(data.total, data.page, data.limit);
-        } else {
-            console.error('Kullanıcılar data.users yok:', data);
-        }
+        displayUsers(data.users || []);
+        displayUsersPagination(data.total || 0, data.page || 1, data.limit || 20);
     })
     .catch(error => {
         console.error('Kullanıcı yükleme hatası:', error);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Hata: ${error.message}</td></tr>`;
-        }
+        document.getElementById('usersTable').innerHTML = '<div class="alert alert-danger">Kullanıcılar yüklenirken hata oluştu.</div>';
     });
 }
 
+// Kullanıcıları göster
 function displayUsers(users) {
-    const tbody = document.getElementById('usersTableBody');
-    const search = document.getElementById('userSearch').value.toLowerCase();
-    
-    let filteredUsers = users;
-    if (search) {
-        filteredUsers = users.filter(user => 
-            user.email.toLowerCase().includes(search) ||
-            (user.name && user.name.toLowerCase().includes(search))
-        );
-    }
-
-    if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Kullanıcı bulunamadı</td></tr>';
+    if (users.length === 0) {
+        document.getElementById('usersTable').innerHTML = '<div class="alert alert-info">Kullanıcı bulunamadı.</div>';
         return;
     }
-
-    tbody.innerHTML = filteredUsers.map(user => `
-        <tr>
-            <td>${user.id}</td>
-            <td>${user.email}</td>
-            <td>${user.name || '-'}</td>
-            <td>${user.age || '-'}</td>
-            <td>${user.gender || '-'}</td>
-            <td>${user.weight || '-'}</td>
-            <td>${user.target_weight || '-'}</td>
-            <td>${new Date(user.created_at).toLocaleDateString('tr-TR')}</td>
-            <td>
-                <button class="btn btn-sm btn-primary me-1" onclick="editUser(${user.id})" title="Düzenle">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Sil">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    
+    const table = `
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ad</th>
+                    <th>Email</th>
+                    <th>Yaş</th>
+                    <th>Cinsiyet</th>
+                    <th>Kilo</th>
+                    <th>Hedef</th>
+                    <th>Kayıt Tarihi</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.name || '-'}</td>
+                        <td>${user.email}</td>
+                        <td>${user.age || '-'}</td>
+                        <td>${user.gender || '-'}</td>
+                        <td>${user.weight || '-'}</td>
+                        <td>${user.goal || '-'}</td>
+                        <td>${new Date(user.created_at).toLocaleDateString('tr-TR')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-1" onclick="editUser(${user.id})" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    document.getElementById('usersTable').innerHTML = table;
 }
 
+// Kullanıcı pagination göster
 function displayUsersPagination(total, page, limit) {
     const totalPages = Math.ceil(total / limit);
     const pagination = document.getElementById('usersPagination');
@@ -396,22 +340,19 @@ function displayUsersPagination(total, page, limit) {
         pagination.innerHTML = '';
         return;
     }
-
-    let html = '';
+    
+    let html = '<nav><ul class="pagination">';
     for (let i = 1; i <= totalPages; i++) {
-        html += `
-            <li class="page-item ${i === page ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="loadUsers(${i}); return false;">${i}</a>
-            </li>
-        `;
+        html += `<li class="page-item ${i === page ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadUsers(${i}); return false;">${i}</a>
+        </li>`;
     }
+    html += '</ul></nav>';
     pagination.innerHTML = html;
 }
 
+// Kullanıcı düzenle
 function editUser(userId) {
-    console.log('Kullanıcı düzenleniyor:', userId);
-    
-    // Kullanıcı detaylarını getir
     fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         headers: {
             'Authorization': `Bearer ${authToken}`
@@ -423,45 +364,65 @@ function editUser(userId) {
             alert('Hata: ' + data.error);
             return;
         }
-        
-        const user = data.user;
-        
-        // Modal'ı doldur
+        const user = data.user || data;
+        // Modal aç ve kullanıcı bilgilerini göster
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
         document.getElementById('editUserId').value = user.id;
-        document.getElementById('editUserEmail').value = user.email || '';
         document.getElementById('editUserName').value = user.name || '';
+        document.getElementById('editUserEmail').value = user.email || '';
         document.getElementById('editUserAge').value = user.age || '';
         document.getElementById('editUserGender').value = user.gender || '';
         document.getElementById('editUserHeight').value = user.height || '';
         document.getElementById('editUserWeight').value = user.weight || '';
         document.getElementById('editUserTargetWeight').value = user.target_weight || '';
-        document.getElementById('editUserActivityLevel').value = user.activity_level || 'sedentary';
-        document.getElementById('editUserGoal').value = user.goal || 'Kilo Koruma';
+        document.getElementById('editUserActivityLevel').value = user.activity_level || '';
+        document.getElementById('editUserGoal').value = user.goal || '';
         
-        // Modal'ı göster
-        const modal = new bootstrap.Modal(document.getElementById('userEditModal'));
+        // Şifre modal için user ID'yi sakla
+        document.getElementById('changePasswordUserId').value = user.id;
+        
+        // Hata mesajını temizle
+        document.getElementById('editUserError').classList.add('hidden');
+        document.getElementById('editUserError').textContent = '';
+        
         modal.show();
     })
     .catch(error => {
         console.error('Kullanıcı detay hatası:', error);
-        alert('Hata: ' + error.message);
+        alert('Kullanıcı bilgileri yüklenirken hata oluştu.');
     });
 }
 
+// Kullanıcı kaydet
 function saveUserEdit() {
     const userId = document.getElementById('editUserId').value;
+    const errorDiv = document.getElementById('editUserError');
+    
+    // Validation
+    const email = document.getElementById('editUserEmail').value.trim();
+    if (!email || !email.includes('@')) {
+        errorDiv.textContent = 'Geçerli bir email adresi giriniz';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
     const userData = {
-        name: document.getElementById('editUserName').value,
-        age: parseInt(document.getElementById('editUserAge').value) || null,
+        name: document.getElementById('editUserName').value.trim() || null,
+        email: email,
+        age: document.getElementById('editUserAge').value ? parseInt(document.getElementById('editUserAge').value) : null,
         gender: document.getElementById('editUserGender').value || null,
-        height: parseFloat(document.getElementById('editUserHeight').value) || null,
-        weight: parseFloat(document.getElementById('editUserWeight').value) || null,
-        target_weight: parseFloat(document.getElementById('editUserTargetWeight').value) || null,
-        activity_level: document.getElementById('editUserActivityLevel').value,
-        goal: document.getElementById('editUserGoal').value
+        height: document.getElementById('editUserHeight').value ? parseFloat(document.getElementById('editUserHeight').value) : null,
+        weight: document.getElementById('editUserWeight').value ? parseFloat(document.getElementById('editUserWeight').value) : null,
+        target_weight: document.getElementById('editUserTargetWeight').value ? parseFloat(document.getElementById('editUserTargetWeight').value) : null,
+        activity_level: document.getElementById('editUserActivityLevel').value || null,
+        goal: document.getElementById('editUserGoal').value || null
     };
     
-    console.log('Kullanıcı güncelleniyor:', userId, userData);
+    // Loading göster
+    const saveBtn = document.querySelector('#editUserModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kaydediliyor...';
     
     fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: 'PUT',
@@ -474,28 +435,118 @@ function saveUserEdit() {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Hata: ' + data.error);
+            errorDiv.textContent = data.error;
+            errorDiv.classList.remove('hidden');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
         } else {
-            alert('Kullanıcı güncellendi');
-            // Modal'ı kapat
-            const modal = bootstrap.Modal.getInstance(document.getElementById('userEditModal'));
-            modal.hide();
-            // Kullanıcı listesini yenile
-            loadUsers(currentUsersPage);
+            alert('Kullanıcı güncellendi!');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUsers(1);
             loadDashboard();
         }
     })
     .catch(error => {
         console.error('Kullanıcı güncelleme hatası:', error);
-        alert('Hata: ' + error.message);
+        errorDiv.textContent = 'Kullanıcı güncellenirken hata oluştu: ' + error.message;
+        errorDiv.classList.remove('hidden');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
     });
 }
 
-function deleteUser(userId) {
-    if (!confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) {
+// Şifre değiştir modal'ını göster
+function showChangePasswordModal() {
+    const userId = document.getElementById('editUserId').value;
+    if (!userId) {
+        alert('Kullanıcı seçilmedi!');
         return;
     }
+    
+    // Kullanıcı düzenleme modal'ını kapat
+    const editModal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+    if (editModal) {
+        editModal.hide();
+    }
+    
+    // Şifre değiştir modal'ını aç
+    document.getElementById('changePasswordUserId').value = userId;
+    document.getElementById('changePasswordNew').value = '';
+    document.getElementById('changePasswordConfirm').value = '';
+    document.getElementById('changePasswordError').classList.add('hidden');
+    document.getElementById('changePasswordError').textContent = '';
+    
+    const passwordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+    passwordModal.show();
+}
 
+// Şifre değiştir
+function savePasswordChange() {
+    const userId = document.getElementById('changePasswordUserId').value;
+    const newPassword = document.getElementById('changePasswordNew').value;
+    const confirmPassword = document.getElementById('changePasswordConfirm').value;
+    const errorDiv = document.getElementById('changePasswordError');
+    
+    // Validation
+    if (!newPassword) {
+        errorDiv.textContent = 'Yeni şifre gerekli';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        errorDiv.textContent = 'Şifre en az 6 karakter olmalıdır';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        errorDiv.textContent = 'Şifreler eşleşmiyor';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    // Loading göster
+    const saveBtn = document.querySelector('#changePasswordModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Değiştiriliyor...';
+    
+    fetch(`${API_BASE_URL}/admin/users/${userId}/password`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ password: newPassword })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            errorDiv.textContent = data.error;
+            errorDiv.classList.remove('hidden');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        } else {
+            alert('Şifre değiştirildi!');
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+        }
+    })
+    .catch(error => {
+        console.error('Şifre değiştirme hatası:', error);
+        errorDiv.textContent = 'Şifre değiştirilirken hata oluştu: ' + error.message;
+        errorDiv.classList.remove('hidden');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+// Kullanıcı sil
+function deleteUser(userId) {
+    if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
     fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -507,102 +558,93 @@ function deleteUser(userId) {
         if (data.error) {
             alert('Hata: ' + data.error);
         } else {
-            alert('Kullanıcı silindi');
-            loadUsers(currentUsersPage);
+            alert('Kullanıcı silindi!');
+            loadUsers(1);
             loadDashboard();
         }
     })
     .catch(error => {
-        alert('Hata: ' + error.message);
+        console.error('Kullanıcı silme hatası:', error);
+        alert('Kullanıcı silinirken hata oluştu.');
     });
 }
 
-// Foods
-let currentFoodsPage = 1;
+// Besinleri yükle
 function loadFoods(page = 1) {
-    console.log('loadFoods çağrıldı, sayfa:', page);
-    currentFoodsPage = page;
     const search = document.getElementById('foodSearch')?.value || '';
+    const url = `${API_BASE_URL}/admin/foods?page=${page}&limit=50${search ? `&search=${encodeURIComponent(search)}` : ''}`;
     
-    const tbody = document.getElementById('foodsTableBody');
-    if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></td></tr>';
-    }
+    document.getElementById('foodsTable').innerHTML = '<div class="loading"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></div>';
     
-    fetch(`${API_BASE_URL}/admin/foods?page=${page}&limit=50`, {
+    fetch(url, {
         headers: {
             'Authorization': `Bearer ${authToken}`
         }
     })
-    .then(response => {
-        console.log('Besinler response status:', response.status);
-        if (!response.ok) {
-            return response.json().then(err => {
-                throw new Error(err.error || 'Besinler yüklenemedi');
-            });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Besinler data:', data);
         if (data.error) {
             if (data.error === 'Yetkisiz erişim') {
                 logout();
-                return;
             }
-            alert('Hata: ' + data.error);
             return;
         }
-        if (data.foods) {
-            displayFoods(data.foods);
-            displayFoodsPagination(data.total, data.page, data.limit);
-        } else {
-            console.error('Besinler data.foods yok:', data);
-        }
+        displayFoods(data.foods || []);
+        displayFoodsPagination(data.total || 0, data.page || 1, data.limit || 50);
     })
     .catch(error => {
         console.error('Besin yükleme hatası:', error);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Hata: ${error.message}</td></tr>`;
-        }
+        document.getElementById('foodsTable').innerHTML = '<div class="alert alert-danger">Besinler yüklenirken hata oluştu.</div>';
     });
 }
 
+// Besinleri göster
 function displayFoods(foods) {
-    const tbody = document.getElementById('foodsTableBody');
-    const search = document.getElementById('foodSearch').value.toLowerCase();
-    
-    let filteredFoods = foods;
-    if (search) {
-        filteredFoods = foods.filter(food => 
-            food.name.toLowerCase().includes(search)
-        );
-    }
-
-    if (filteredFoods.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Besin bulunamadı</td></tr>';
+    if (foods.length === 0) {
+        document.getElementById('foodsTable').innerHTML = '<div class="alert alert-info">Besin bulunamadı.</div>';
         return;
     }
-
-    tbody.innerHTML = filteredFoods.map(food => `
-        <tr>
-            <td>${food.id}</td>
-            <td>${food.name}</td>
-            <td>${food.calories}</td>
-            <td>${food.protein || '-'}</td>
-            <td>${food.carbs || '-'}</td>
-            <td>${food.fat || '-'}</td>
-            <td>${food.serving_size || '-'}</td>
-            <td>${food.category || '-'}</td>
-            <td>
-                <button class="btn btn-sm btn-danger" onclick="deleteFood(${food.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    
+    const table = `
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ad</th>
+                    <th>Kalori</th>
+                    <th>Protein (g)</th>
+                    <th>Karbonhidrat (g)</th>
+                    <th>Yağ (g)</th>
+                    <th>Porsiyon</th>
+                    <th>Kategori</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${foods.map(food => `
+                    <tr>
+                        <td>${food.id}</td>
+                        <td>${food.name}</td>
+                        <td>${food.calories || 0}</td>
+                        <td>${food.protein || 0}</td>
+                        <td>${food.carbs || 0}</td>
+                        <td>${food.fat || 0}</td>
+                        <td>${food.serving_size || '-'}</td>
+                        <td>${food.category || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFood(${food.id})" title="Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    document.getElementById('foodsTable').innerHTML = table;
 }
 
+// Besin pagination göster
 function displayFoodsPagination(total, page, limit) {
     const totalPages = Math.ceil(total / limit);
     const pagination = document.getElementById('foodsPagination');
@@ -611,32 +653,38 @@ function displayFoodsPagination(total, page, limit) {
         pagination.innerHTML = '';
         return;
     }
-
-    let html = '';
+    
+    let html = '<nav><ul class="pagination">';
     for (let i = 1; i <= totalPages; i++) {
-        html += `
-            <li class="page-item ${i === page ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="loadFoods(${i}); return false;">${i}</a>
-            </li>
-        `;
+        html += `<li class="page-item ${i === page ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadFoods(${i}); return false;">${i}</a>
+        </li>`;
     }
+    html += '</ul></nav>';
     pagination.innerHTML = html;
 }
 
+// Besin ekle
 function handleAddFood(e) {
     e.preventDefault();
     
     const foodData = {
-        name: document.getElementById('foodName').value,
-        calories: parseFloat(document.getElementById('foodCalories').value),
+        name: document.getElementById('foodName').value.trim(),
+        calories: parseFloat(document.getElementById('foodCalories').value) || 0,
         protein: parseFloat(document.getElementById('foodProtein').value) || 0,
         carbs: parseFloat(document.getElementById('foodCarbs').value) || 0,
         fat: parseFloat(document.getElementById('foodFat').value) || 0,
-        serving_size: document.getElementById('foodServing').value || null,
-        category: document.getElementById('foodCategory').value || 'Diğer',
-        barcode: document.getElementById('foodBarcode').value || null
+        serving_size: document.getElementById('foodServing').value.trim() || null,
+        category: document.getElementById('foodCategory').value.trim() || 'Diğer',
+        barcode: document.getElementById('foodBarcode').value.trim() || null
     };
-
+    
+    // Loading göster
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
     fetch(`${API_BASE_URL}/admin/foods`, {
         method: 'POST',
         headers: {
@@ -649,23 +697,31 @@ function handleAddFood(e) {
     .then(data => {
         if (data.error) {
             alert('Hata: ' + data.error);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         } else {
-            alert('Besin eklendi');
+            alert('Besin eklendi!');
             document.getElementById('addFoodForm').reset();
-            loadFoods(currentFoodsPage);
+            loadFoods(1);
             loadDashboard();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         }
     })
     .catch(error => {
-        alert('Hata: ' + error.message);
+        console.error('Besin ekleme hatası:', error);
+        alert('Besin eklenirken hata oluştu: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     });
 }
 
+// Besin sil
 function deleteFood(foodId) {
-    if (!confirm('Bu besini silmek istediğinize emin misiniz?')) {
+    if (!confirm('Bu besini silmek istediğinizden emin misiniz?')) {
         return;
     }
-
+    
     fetch(`${API_BASE_URL}/admin/foods/${foodId}`, {
         method: 'DELETE',
         headers: {
@@ -677,95 +733,59 @@ function deleteFood(foodId) {
         if (data.error) {
             alert('Hata: ' + data.error);
         } else {
-            alert('Besin silindi');
-            loadFoods(currentFoodsPage);
+            alert('Besin silindi!');
+            loadFoods(1);
             loadDashboard();
         }
     })
     .catch(error => {
-        alert('Hata: ' + error.message);
+        console.error('Besin silme hatası:', error);
+        alert('Besin silinirken hata oluştu.');
     });
 }
 
-// Utility functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Logs
-let currentLogsPage = 1;
+// Logları yükle
 function loadLogs(page = 1) {
-    console.log('loadLogs çağrıldı, sayfa:', page);
-    currentLogsPage = page;
     const logType = document.getElementById('logTypeFilter')?.value || 'all';
     const dateFrom = document.getElementById('logDateFrom')?.value || null;
     const dateTo = document.getElementById('logDateTo')?.value || null;
     
-    const tbody = document.getElementById('logsTableBody');
-    if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></td></tr>';
-    }
-    
     let url = `${API_BASE_URL}/admin/logs?page=${page}&limit=50&type=${logType}`;
     if (dateFrom) url += `&date_from=${dateFrom}`;
     if (dateTo) url += `&date_to=${dateTo}`;
+    
+    document.getElementById('logsTable').innerHTML = '<div class="loading"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div></div>';
     
     fetch(url, {
         headers: {
             'Authorization': `Bearer ${authToken}`
         }
     })
-    .then(response => {
-        console.log('Loglar response status:', response.status);
-        if (!response.ok) {
-            return response.json().then(err => {
-                throw new Error(err.error || 'Loglar yüklenemedi');
-            });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Loglar data:', data);
         if (data.error) {
             if (data.error === 'Yetkisiz erişim') {
                 logout();
-                return;
             }
-            alert('Hata: ' + data.error);
             return;
         }
-        if (data.logs) {
-            displayLogs(data.logs);
-            displayLogsPagination(data.total, data.page, data.limit);
-        } else {
-            console.error('Loglar data.logs yok:', data);
-        }
+        displayLogs(data.logs || []);
+        displayLogsPagination(data.total || 0, data.page || 1, data.limit || 50);
     })
     .catch(error => {
         console.error('Log yükleme hatası:', error);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Hata: ${error.message}</td></tr>`;
-        }
+        document.getElementById('logsTable').innerHTML = '<div class="alert alert-danger">Loglar yüklenirken hata oluştu.</div>';
     });
 }
 
+// Logları göster
 function displayLogs(logs) {
-    const tbody = document.getElementById('logsTableBody');
-    
-    if (!logs || logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Log bulunamadı</td></tr>';
+    if (logs.length === 0) {
+        document.getElementById('logsTable').innerHTML = '<div class="alert alert-info">Log bulunamadı.</div>';
         return;
     }
     
-    tbody.innerHTML = logs.map(log => {
+    const rows = logs.map(log => {
         let detail = '';
         let typeLabel = '';
         let typeIcon = '';
@@ -815,8 +835,27 @@ function displayLogs(logs) {
             </tr>
         `;
     }).join('');
+    
+    const table = `
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Tür</th>
+                    <th>Kullanıcı</th>
+                    <th>Tarih</th>
+                    <th>Detay</th>
+                    <th>Oluşturma</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+    document.getElementById('logsTable').innerHTML = table;
 }
 
+// Log pagination göster
 function displayLogsPagination(total, page, limit) {
     const totalPages = Math.ceil(total / limit);
     const pagination = document.getElementById('logsPagination');
@@ -825,16 +864,28 @@ function displayLogsPagination(total, page, limit) {
         pagination.innerHTML = '';
         return;
     }
-
-    let html = '';
+    
+    let html = '<nav><ul class="pagination">';
     for (let i = 1; i <= totalPages; i++) {
-        html += `
-            <li class="page-item ${i === page ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="loadLogs(${i}); return false;">${i}</a>
-            </li>
-        `;
+        html += `<li class="page-item ${i === page ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadLogs(${i}); return false;">${i}</a>
+        </li>`;
     }
+    html += '</ul></nav>';
     pagination.innerHTML = html;
+}
+
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 // Make functions global
@@ -844,6 +895,7 @@ window.loadFoods = loadFoods;
 window.loadLogs = loadLogs;
 window.editUser = editUser;
 window.saveUserEdit = saveUserEdit;
+window.showChangePasswordModal = showChangePasswordModal;
+window.savePasswordChange = savePasswordChange;
 window.deleteUser = deleteUser;
 window.deleteFood = deleteFood;
-

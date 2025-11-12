@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diyet Takip - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-color: #1f2937;
+            --light-color: #f9fafb;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar .logo {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 20px;
+        }
+
+        .sidebar .logo h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .sidebar .nav-item {
+            margin: 5px 10px;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .sidebar .nav-link i {
+            width: 20px;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .stat-card .icon.users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card .icon.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .stat-card .icon.foods { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .stat-card .icon.logs { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+
+        .stat-card h3 {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 10px 0;
+            color: var(--dark-color);
+        }
+
+        .stat-card p {
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .table {
+            background: white;
+        }
+
+        .table thead {
+            background-color: #f9fafb;
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--dark-color);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <h2><i class="fas fa-lock"></i> Admin Girişi</h2>
+            <div id="loginError" class="alert alert-danger hidden" role="alert"></div>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" value="admin@diyettakip.com" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Şifre</label>
+                    <input type="password" class="form-control" id="password" value="admin123" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-sign-in-alt"></i> Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 sidebar">
+                    <div class="logo">
+                        <h4><i class="fas fa-user-shield"></i> Admin Panel</h4>
+                    </div>
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                            <i class="fas fa-chart-line"></i> Dashboard
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('users')">
+                            <i class="fas fa-users"></i> Kullanıcılar
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('foods')">
+                            <i class="fas fa-utensils"></i> Besinler
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('logs')">
+                            <i class="fas fa-list-alt"></i> Loglar
+                        </a>
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Çıkış
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Main Content -->
+                <div class="col-md-10 main-content">
+                    <!-- Dashboard -->
+                    <div id="dashboardSection" class="section">
+                        <h2 class="mb-4">Dashboard</h2>
+                        <div class="row" id="statsContainer">
+                            <div class="loading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Yükleniyor...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-area"></i> Son 7 Günlük Aktivite
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="activityChart" height="80"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Users Section -->
+                    <div id="usersSection" class="section hidden">
+                        <h2 class="mb-4">Kullanıcı Yönetimi</h2>
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-users"></i> Kullanıcılar
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="userSearch" placeholder="Kullanıcı ara...">
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Email</th>
+                                                <th>Ad</th>
+                                                <th>Yaş</th>
+                                                <th>Cinsiyet</th>
+                                                <th>Kilo</th>
+                                                <th>Hedef</th>
+                                                <th>Kayıt Tarihi</th>
+                                                <th>İşlemler</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="usersTableBody">
+                                            <tr>
+                                                <td colspan="9" class="text-center">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Yükleniyor...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <nav>
+                                    <ul class="pagination justify-content-center" id="usersPagination"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Edit Modal -->
+                    <div class="modal fade" id="userEditModal" tabindex="-1" aria-labelledby="userEditModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="userEditModalLabel">
+                                        <i class="fas fa-user-edit"></i> Kullanıcı Düzenle
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="userEditForm">
+                                        <input type="hidden" id="editUserId">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="editUserName" class="form-label">Ad</label>
+                                                <input type="text" class="form-control" id="editUserName">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="editUserEmail" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="editUserEmail" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserAge" class="form-label">Yaş</label>
+                                                <input type="number" class="form-control" id="editUserAge">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserGender" class="form-label">Cinsiyet</label>
+                                                <select class="form-control" id="editUserGender">
+                                                    <option value="">Seçiniz</option>
+                                                    <option value="Erkek">Erkek</option>
+                                                    <option value="Kadın">Kadın</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserHeight" class="form-label">Boy (cm)</label>
+                                                <input type="number" class="form-control" id="editUserHeight" step="0.1">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserWeight" class="form-label">Kilo (kg)</label>
+                                                <input type="number" class="form-control" id="editUserWeight" step="0.1">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserTargetWeight" class="form-label">Hedef Kilo (kg)</label>
+                                                <input type="number" class="form-control" id="editUserTargetWeight" step="0.1">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="editUserActivityLevel" class="form-label">Aktivite Seviyesi</label>
+                                                <select class="form-control" id="editUserActivityLevel">
+                                                    <option value="sedentary">Hareketsiz</option>
+                                                    <option value="light">Az Aktif</option>
+                                                    <option value="moderate">Aktif</option>
+                                                    <option value="active">Çok Aktif</option>
+                                                    <option value="very_active">Aşırı Aktif</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="editUserGoal" class="form-label">Hedef</label>
+                                                <select class="form-control" id="editUserGoal">
+                                                    <option value="Kilo Verme">Kilo Verme</option>
+                                                    <option value="Kilo Koruma">Kilo Koruma</option>
+                                                    <option value="Kilo Alma">Kilo Alma</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="alert alert-info">
+                                                    <strong>Bilgi:</strong> Kilo veya hedef değiştiğinde, BMR, TDEE ve makro besin değerleri otomatik olarak yeniden hesaplanacaktır.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                    <button type="button" class="btn btn-primary" onclick="saveUserEdit()">
+                                        <i class="fas fa-save"></i> Kaydet
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logs Section -->
+                    <div id="logsSection" class="section hidden">
+                        <h2 class="mb-4">Log Yönetimi</h2>
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-list-alt"></i> Tüm Loglar
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <select class="form-control" id="logTypeFilter">
+                                            <option value="all">Tüm Loglar</option>
+                                            <option value="daily">Besin Logları</option>
+                                            <option value="water">Su Logları</option>
+                                            <option value="exercise">Egzersiz Logları</option>
+                                            <option value="weight">Kilo Logları</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="date" class="form-control" id="logDateFrom" placeholder="Başlangıç Tarihi">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="date" class="form-control" id="logDateTo" placeholder="Bitiş Tarihi">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-primary w-100" onclick="loadLogs(1)">
+                                            <i class="fas fa-search"></i> Filtrele
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i> <strong>Bilgi:</strong> Tüm kullanıcı aktivitelerini (besin, su, egzersiz, kilo) buradan görüntüleyebilirsiniz.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Tür</th>
+                                                <th>Kullanıcı</th>
+                                                <th>Tarih</th>
+                                                <th>Detay</th>
+                                                <th>Oluşturma</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="logsTableBody">
+                                            <tr>
+                                                <td colspan="5" class="text-center">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Yükleniyor...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <nav>
+                                    <ul class="pagination justify-content-center" id="logsPagination"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Foods Section -->
+                    <div id="foodsSection" class="section hidden">
+                        <h2 class="mb-4">Besin Yönetimi</h2>
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-plus"></i> Yeni Besin Ekle
+                            </div>
+                            <div class="card-body">
+                                <form id="addFoodForm">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" id="foodName" placeholder="Besin Adı" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="foodCalories" placeholder="Kalori" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="foodProtein" placeholder="Protein (g)">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="foodCarbs" placeholder="Karbonhidrat (g)">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" class="form-control" id="foodFat" placeholder="Yağ (g)">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" id="foodServing" placeholder="Porsiyon">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" id="foodCategory" placeholder="Kategori">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" id="foodBarcode" placeholder="Barkod">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-utensils"></i> Besinler
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="foodSearch" placeholder="Besin ara...">
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Ad</th>
+                                                <th>Kalori</th>
+                                                <th>Protein</th>
+                                                <th>Karbonhidrat</th>
+                                                <th>Yağ</th>
+                                                <th>Porsiyon</th>
+                                                <th>Kategori</th>
+                                                <th>İşlemler</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="foodsTableBody">
+                                            <tr>
+                                                <td colspan="9" class="text-center">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Yükleniyor...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <nav>
+                                    <ul class="pagination justify-content-center" id="foodsPagination"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="/admin/app.js"></script>
+</body>
+</html>
+

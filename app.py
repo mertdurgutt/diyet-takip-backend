@@ -22,7 +22,7 @@ app = Flask(__name__)
 # JWT Secret Key (production'da mutlaka environment variable'dan alın)
 jwt_secret = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 if jwt_secret == 'your-secret-key-change-in-production':
-    print("⚠️  UYARI: JWT_SECRET_KEY varsayılan değerde! Production'da mutlaka değiştirin!")
+    print("UYARI: JWT_SECRET_KEY varsayilan degerde! Production'da mutlaka degistirin!")
 app.config['JWT_SECRET_KEY'] = jwt_secret
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=30)
 
@@ -279,6 +279,28 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users (id),
             FOREIGN KEY (food_id) REFERENCES foods (id),
             UNIQUE(user_id, food_id)
+        )
+    ''')
+    
+    # Tarifler tablosu
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS recipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            instructions TEXT,
+            calories REAL,
+            protein REAL,
+            carbs REAL,
+            fat REAL,
+            servings INTEGER DEFAULT 1,
+            prep_time INTEGER,
+            cook_time INTEGER,
+            difficulty TEXT,
+            category TEXT,
+            goal TEXT,
+            image_url TEXT,
+            created_at TEXT NOT NULL
         )
     ''')
     
@@ -761,33 +783,63 @@ def get_recommendations():
             recommendations = [
                 {
                     'title': '💧 Bol Su İçin',
-                    'description': 'Günde en az 2-3 litre su içmek metabolizmanızı hızlandırır ve tokluk hissi verir.',
+                    'description': 'Günde en az 2-3 litre su içmek metabolizmanızı hızlandırır ve tokluk hissi verir. Yemeklerden önce su içmek daha az yemenize yardımcı olur.',
                     'icon': '💧'
                 },
                 {
                     'title': '🥗 Protein Ağırlıklı Beslenin',
-                    'description': 'Protein, kas kütlenizi korurken yağ yakımını destekler. Her öğünde protein içeren besinler tüketin.',
+                    'description': 'Protein, kas kütlenizi korurken yağ yakımını destekler. Her öğünde protein içeren besinler tüketin. Tavuk, balık, yumurta ve baklagiller harika seçeneklerdir.',
                     'icon': '🥗'
                 },
                 {
                     'title': '🏃 Düzenli Egzersiz Yapın',
-                    'description': 'Haftada 3-4 kez kardiyovasküler egzersiz ve ağırlık antrenmanı yapın. Günde en az 30 dakika yürüyüş yapın.',
+                    'description': 'Haftada 3-4 kez kardiyovasküler egzersiz ve ağırlık antrenmanı yapın. Günde en az 30 dakika yürüyüş yapın. Düzenli egzersiz metabolizmanızı hızlandırır.',
                     'icon': '🏃'
                 },
                 {
                     'title': '⏰ Düzenli Uyku',
-                    'description': 'Günde 7-8 saat kaliteli uyku, hormon dengesini korur ve kilo vermeyi kolaylaştırır.',
+                    'description': 'Günde 7-8 saat kaliteli uyku, hormon dengesini korur ve kilo vermeyi kolaylaştırır. Uykusuzluk iştah hormonlarını etkileyebilir.',
                     'icon': '⏰'
                 },
                 {
                     'title': '🍎 Sağlıklı Atıştırmalıklar',
-                    'description': 'Açlık hissettiğinizde meyve, kuruyemiş veya yoğurt gibi sağlıklı atıştırmalıklar tercih edin.',
+                    'description': 'Açlık hissettiğinizde meyve, kuruyemiş veya yoğurt gibi sağlıklı atıştırmalıklar tercih edin. İşlenmiş gıdalardan kaçının.',
                     'icon': '🍎'
                 },
                 {
                     'title': '📊 Kalori Takibi',
-                    'description': f'Günlük {int(daily_calories)} kalori hedefinizi aşmamaya çalışın. Küçük porsiyonlar ve yavaş yeme alışkanlığı edinin.',
+                    'description': f'Günlük {int(daily_calories)} kalori hedefinizi aşmamaya çalışın. Küçük porsiyonlar ve yavaş yeme alışkanlığı edinin. Her lokmayı iyice çiğneyin.',
                     'icon': '📊'
+                },
+                {
+                    'title': '🥑 Sağlıklı Yağlar',
+                    'description': 'Zeytinyağı, avokado ve kuruyemiş gibi sağlıklı yağlar tüketin. Bu yağlar tokluk hissi verir ve metabolizmayı destekler.',
+                    'icon': '🥑'
+                },
+                {
+                    'title': '🌱 Lifli Besinler',
+                    'description': 'Sebze, meyve ve tam tahıllar gibi lifli besinler tüketin. Lif, sindirimi yavaşlatır ve uzun süre tok kalmanızı sağlar.',
+                    'icon': '🌱'
+                },
+                {
+                    'title': '🚫 İşlenmiş Gıdalardan Kaçının',
+                    'description': 'Hazır gıdalar, şekerli içecekler ve işlenmiş atıştırmalıklar yüksek kalorilidir. Bu gıdalardan mümkün olduğunca kaçının.',
+                    'icon': '🚫'
+                },
+                {
+                    'title': '📱 Uygulamayı Düzenli Kullanın',
+                    'description': 'Besinlerinizi düzenli olarak kaydedin. Bu, farkındalığınızı artırır ve daha sağlıklı seçimler yapmanıza yardımcı olur.',
+                    'icon': '📱'
+                },
+                {
+                    'title': '⏱️ Yavaş Yiyin',
+                    'description': 'Yemekleri yavaş yemek, beyninize tokluk sinyali göndermesi için zaman verir. Her öğünü en az 20 dakikada tamamlayın.',
+                    'icon': '⏱️'
+                },
+                {
+                    'title': '🎯 Gerçekçi Hedefler',
+                    'description': 'Haftalık 0.5-1 kg vermek sağlıklı bir hedeftir. Hızlı kilo verme programlarından kaçının, uzun vadeli sağlıklı alışkanlıklar edinin.',
+                    'icon': '🎯'
                 }
             ]
         # Kilo alma önerileri
@@ -795,33 +847,63 @@ def get_recommendations():
             recommendations = [
                 {
                     'title': '🥩 Kalori Yoğun Besinler',
-                    'description': 'Kuruyemiş, avokado, tam tahıllar gibi kalori yoğun ama sağlıklı besinler tüketin.',
+                    'description': 'Kuruyemiş, avokado, tam tahıllar gibi kalori yoğun ama sağlıklı besinler tüketin. Bu besinler kalori alımınızı artırırken sağlığınızı korur.',
                     'icon': '🥩'
                 },
                 {
                     'title': '💪 Ağırlık Antrenmanı',
-                    'description': 'Haftada 3-4 kez ağırlık antrenmanı yaparak kas kütlenizi artırın. Kardiyo egzersizlerini sınırlı tutun.',
+                    'description': 'Haftada 3-4 kez ağırlık antrenmanı yaparak kas kütlenizi artırın. Kardiyo egzersizlerini sınırlı tutun. Ağırlık antrenmanı kas yapımını destekler.',
                     'icon': '💪'
                 },
                 {
                     'title': '🍽️ Sık Öğünler',
-                    'description': 'Günde 5-6 öğün yiyin. Her öğünde protein, karbonhidrat ve sağlıklı yağ içeren dengeli beslenme yapın.',
+                    'description': 'Günde 5-6 öğün yiyin. Her öğünde protein, karbonhidrat ve sağlıklı yağ içeren dengeli beslenme yapın. Küçük ama sık öğünler iştahınızı artırır.',
                     'icon': '🍽️'
                 },
                 {
                     'title': '🥤 Kalorili İçecekler',
-                    'description': 'Smoothie, süt, meyve suyu gibi besleyici içecekler tüketin. Su yerine bazen protein shake içebilirsiniz.',
+                    'description': 'Smoothie, süt, meyve suyu gibi besleyici içecekler tüketin. Su yerine bazen protein shake içebilirsiniz. İçecekler kalori alımınızı kolaylaştırır.',
                     'icon': '🥤'
                 },
                 {
                     'title': '📈 İlerleme Takibi',
-                    'description': f'Hedefiniz {int(target_weight)} kg. Haftalık kilo takibi yapın ve sabırlı olun. Sağlıklı kilo alma zaman alır.',
+                    'description': f'Hedefiniz {int(target_weight)} kg. Haftalık kilo takibi yapın ve sabırlı olun. Sağlıklı kilo alma zaman alır. İlerlemenizi düzenli takip edin.',
                     'icon': '📈'
                 },
                 {
                     'title': '🌙 İyi Uyku',
-                    'description': 'Kas gelişimi için günde 7-9 saat uyuyun. Uyku, büyüme hormonu salgılanmasını artırır.',
+                    'description': 'Kas gelişimi için günde 7-9 saat uyuyun. Uyku, büyüme hormonu salgılanmasını artırır. Kaliteli uyku kas onarımını destekler.',
                     'icon': '🌙'
+                },
+                {
+                    'title': '🥚 Protein Alımı',
+                    'description': 'Kas yapımı için yeterli protein alın. Günde kilo başına 1.6-2.2 gram protein hedefleyin. Yumurta, et, balık ve baklagiller harika protein kaynaklarıdır.',
+                    'icon': '🥚'
+                },
+                {
+                    'title': '🍞 Karbonhidrat Tüketimi',
+                    'description': 'Antrenman öncesi ve sonrası karbonhidrat tüketin. Karbonhidratlar enerji sağlar ve kas glikojen depolarını doldurur. Tam tahıllar tercih edin.',
+                    'icon': '🍞'
+                },
+                {
+                    'title': '🥑 Sağlıklı Yağlar',
+                    'description': 'Zeytinyağı, avokado, kuruyemiş ve tohumlar gibi sağlıklı yağlar tüketin. Yağlar, kalori alımınızı artırır ve hormon üretimini destekler.',
+                    'icon': '🥑'
+                },
+                {
+                    'title': '📱 Kalori Takibi',
+                    'description': f'Günlük {int(daily_calories)} kalori hedefinizi aşmaya çalışın. Kalori fazlası kilo almanızı sağlar. Besinlerinizi düzenli olarak kaydedin.',
+                    'icon': '📱'
+                },
+                {
+                    'title': '🏋️ Progresif Aşırı Yükleme',
+                    'description': 'Antrenmanlarınızda ağırlıkları kademeli olarak artırın. Progresif aşırı yükleme kas gelişimini tetikler. Her hafta biraz daha fazla ağırlık kaldırın.',
+                    'icon': '🏋️'
+                },
+                {
+                    'title': '🎯 Gerçekçi Hedefler',
+                    'description': 'Haftalık 0.25-0.5 kg almak sağlıklı bir hedeftir. Hızlı kilo alma yağ olarak depolanabilir. Sabırlı olun ve sağlıklı alışkanlıklar edinin.',
+                    'icon': '🎯'
                 }
             ]
         # Kilo koruma önerileri
@@ -829,37 +911,340 @@ def get_recommendations():
             recommendations = [
                 {
                     'title': '⚖️ Dengeli Beslenme',
-                    'description': f'Günlük {int(daily_calories)} kalori hedefinizi koruyun. Makro besinlerinizi dengeli tüketin.',
+                    'description': f'Günlük {int(daily_calories)} kalori hedefinizi koruyun. Makro besinlerinizi dengeli tüketin. Protein, karbonhidrat ve yağ oranlarınızı takip edin.',
                     'icon': '⚖️'
                 },
                 {
                     'title': '🏋️ Düzenli Egzersiz',
-                    'description': 'Haftada 3-4 kez egzersiz yapın. Kardiyovasküler ve direnç antrenmanlarını kombine edin.',
+                    'description': 'Haftada 3-4 kez egzersiz yapın. Kardiyovasküler ve direnç antrenmanlarını kombine edin. Düzenli egzersiz metabolizmanızı aktif tutar.',
                     'icon': '🏋️'
                 },
                 {
                     'title': '💧 Su İçmeyi Unutmayın',
-                    'description': 'Günde 2-3 litre su için. Su, metabolizmanızı aktif tutar ve genel sağlığınızı destekler.',
+                    'description': 'Günde 2-3 litre su için. Su, metabolizmanızı aktif tutar ve genel sağlığınızı destekler. Susuz kalmak metabolizmanızı yavaşlatabilir.',
                     'icon': '💧'
                 },
                 {
                     'title': '🍎 Çeşitli Besinler',
-                    'description': 'Farklı renk ve türde meyve-sebze tüketin. Çeşitlilik, vitamin ve mineral alımınızı artırır.',
+                    'description': 'Farklı renk ve türde meyve-sebze tüketin. Çeşitlilik, vitamin ve mineral alımınızı artırır. Her renk farklı besin öğeleri sağlar.',
                     'icon': '🍎'
                 },
                 {
                     'title': '📊 Düzenli Takip',
-                    'description': 'Kilonuzu ve beslenmenizi düzenli takip edin. Küçük değişiklikleri erken fark edin.',
+                    'description': 'Kilonuzu ve beslenmenizi düzenli takip edin. Küçük değişiklikleri erken fark edin. Haftalık kilo ölçümü yapın.',
                     'icon': '📊'
                 },
                 {
                     'title': '😊 Stres Yönetimi',
-                    'description': 'Stres, kilo alımına neden olabilir. Meditasyon, yoga veya hobilerinizle stresi yönetin.',
+                    'description': 'Stres, kilo alımına neden olabilir. Meditasyon, yoga veya hobilerinizle stresi yönetin. Stres hormonları iştahınızı etkileyebilir.',
                     'icon': '😊'
+                },
+                {
+                    'title': '⏰ Düzenli Uyku',
+                    'description': 'Günde 7-8 saat kaliteli uyku uyuyun. Uyku, hormon dengesini korur ve metabolizmayı düzenler. Uykusuzluk kilo alımına neden olabilir.',
+                    'icon': '⏰'
+                },
+                {
+                    'title': '🥗 Protein Alımı',
+                    'description': 'Yeterli protein alın. Protein, kas kütlenizi korur ve tokluk hissi verir. Her öğünde protein içeren besinler tüketin.',
+                    'icon': '🥗'
+                },
+                {
+                    'title': '🌱 Lifli Besinler',
+                    'description': 'Sebze, meyve ve tam tahıllar gibi lifli besinler tüketin. Lif, sindirimi yavaşlatır ve uzun süre tok kalmanızı sağlar.',
+                    'icon': '🌱'
+                },
+                {
+                    'title': '🚫 İşlenmiş Gıdalardan Kaçının',
+                    'description': 'Hazır gıdalar, şekerli içecekler ve işlenmiş atıştırmalıklar yüksek kalorilidir. Bu gıdalardan mümkün olduğunca kaçının.',
+                    'icon': '🚫'
+                },
+                {
+                    'title': '📱 Uygulamayı Düzenli Kullanın',
+                    'description': 'Besinlerinizi düzenli olarak kaydedin. Bu, farkındalığınızı artırır ve daha sağlıklı seçimler yapmanıza yardımcı olur.',
+                    'icon': '📱'
+                },
+                {
+                    'title': '🎯 Hedefinizi Koruyun',
+                    'description': f'Hedef kilonuz {int(target_weight)} kg. Kilonuzu bu aralıkta tutmaya çalışın. Küçük değişiklikleri erken fark edin ve düzeltin.',
+                    'icon': '🎯'
                 }
             ]
         
         return jsonify({'recommendations': recommendations}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/smart-recommendations', methods=['GET'])
+@jwt_required()
+def get_smart_recommendations():
+    """Akıllı öneriler - kullanıcının mevcut kalori/makro durumuna göre besin önerileri"""
+    try:
+        user_id = get_jwt_identity()
+        date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Kullanıcı bilgilerini al
+        cursor.execute('''
+            SELECT goal, daily_calories, daily_protein, daily_carbs, daily_fat, 
+                   weight, target_weight, activity_level
+            FROM users WHERE id = ?
+        ''', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
+        
+        goal = user['goal'].lower() if user['goal'] else 'kilo koruma'
+        daily_calories = user['daily_calories'] or 2000
+        daily_protein = user['daily_protein'] or 150
+        daily_carbs = user['daily_carbs'] or 250
+        daily_fat = user['daily_fat'] or 65
+        
+        # Bugünkü tüketimleri al
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(calories), 0) as total_calories,
+                COALESCE(SUM(protein), 0) as total_protein,
+                COALESCE(SUM(carbs), 0) as total_carbs,
+                COALESCE(SUM(fat), 0) as total_fat
+            FROM daily_logs
+            WHERE user_id = ? AND date = ?
+        ''', (user_id, date))
+        totals = cursor.fetchone()
+        
+        consumed_calories = totals['total_calories'] or 0
+        consumed_protein = totals['total_protein'] or 0
+        consumed_carbs = totals['total_carbs'] or 0
+        consumed_fat = totals['total_fat'] or 0
+        
+        # Kalan miktarlar
+        remaining_calories = daily_calories - consumed_calories
+        remaining_protein = daily_protein - consumed_protein
+        remaining_carbs = daily_carbs - consumed_carbs
+        remaining_fat = daily_fat - consumed_fat
+        
+        # Akıllı öneriler oluştur
+        recommendations = []
+        
+        # Protein eksikliği
+        if remaining_protein > 20:
+            cursor.execute('''
+                SELECT * FROM foods 
+                WHERE protein > 10 AND calories <= ?
+                ORDER BY protein DESC, calories ASC
+                LIMIT 5
+            ''', (min(remaining_calories, 500),))
+            protein_foods = [dict(row) for row in cursor.fetchall()]
+            if protein_foods:
+                recommendations.append({
+                    'type': 'protein',
+                    'title': '🥩 Protein Önerileri',
+                    'description': f'{int(remaining_protein)}g protein hedefiniz var. Protein içeren besinler:',
+                    'foods': protein_foods,
+                    'icon': '🥩'
+                })
+        
+        # Karbonhidrat eksikliği
+        if remaining_carbs > 30:
+            cursor.execute('''
+                SELECT * FROM foods 
+                WHERE carbs > 15 AND calories <= ?
+                ORDER BY carbs DESC, calories ASC
+                LIMIT 5
+            ''', (min(remaining_calories, 500),))
+            carb_foods = [dict(row) for row in cursor.fetchall()]
+            if carb_foods:
+                recommendations.append({
+                    'type': 'carbs',
+                    'title': '🍞 Karbonhidrat Önerileri',
+                    'description': f'{int(remaining_carbs)}g karbonhidrat hedefiniz var. Karbonhidrat içeren besinler:',
+                    'foods': carb_foods,
+                    'icon': '🍞'
+                })
+        
+        # Yağ eksikliği
+        if remaining_fat > 10:
+            cursor.execute('''
+                SELECT * FROM foods 
+                WHERE fat > 5 AND calories <= ?
+                ORDER BY fat DESC, calories ASC
+                LIMIT 5
+            ''', (min(remaining_calories, 500),))
+            fat_foods = [dict(row) for row in cursor.fetchall()]
+            if fat_foods:
+                recommendations.append({
+                    'type': 'fat',
+                    'title': '🥑 Yağ Önerileri',
+                    'description': f'{int(remaining_fat)}g yağ hedefiniz var. Sağlıklı yağ içeren besinler:',
+                    'foods': fat_foods,
+                    'icon': '🥑'
+                })
+        
+        # Kalori durumuna göre öneriler
+        if remaining_calories > 200:
+            # Yüksek kalorili öneriler (kilo alma için)
+            if 'alma' in goal or 'gain' in goal:
+                cursor.execute('''
+                    SELECT * FROM foods 
+                    WHERE calories > 200 AND calories <= ?
+                    ORDER BY calories DESC
+                    LIMIT 5
+                ''', (min(remaining_calories, 800),))
+                high_calorie_foods = [dict(row) for row in cursor.fetchall()]
+                if high_calorie_foods:
+                    recommendations.append({
+                        'type': 'high_calorie',
+                        'title': '🔥 Yüksek Kalorili Besinler',
+                        'description': f'{int(remaining_calories)} kalori hedefiniz var. Kalori yoğun besinler:',
+                        'foods': high_calorie_foods,
+                        'icon': '🔥'
+                    })
+            # Düşük kalorili öneriler (kilo verme için)
+            elif 'verme' in goal or 'loss' in goal:
+                cursor.execute('''
+                    SELECT * FROM foods 
+                    WHERE calories < 150 AND calories <= ?
+                    ORDER BY calories ASC, protein DESC
+                    LIMIT 5
+                ''', (min(remaining_calories, 300),))
+                low_calorie_foods = [dict(row) for row in cursor.fetchall()]
+                if low_calorie_foods:
+                    recommendations.append({
+                        'type': 'low_calorie',
+                        'title': '🥗 Düşük Kalorili Besinler',
+                        'description': f'{int(remaining_calories)} kalori hedefiniz var. Düşük kalorili besinler:',
+                        'foods': low_calorie_foods,
+                        'icon': '🥗'
+                    })
+        
+        # Hedef bazlı öneriler
+        if 'verme' in goal or 'loss' in goal:
+            # Düşük kalorili, yüksek protein besinler
+            cursor.execute('''
+                SELECT * FROM foods 
+                WHERE protein > 15 AND calories < 200 AND calories <= ?
+                ORDER BY protein DESC, calories ASC
+                LIMIT 5
+            ''', (min(remaining_calories, 400),))
+            weight_loss_foods = [dict(row) for row in cursor.fetchall()]
+            if weight_loss_foods:
+                recommendations.append({
+                    'type': 'weight_loss',
+                    'title': '💪 Kilo Verme İçin Öneriler',
+                    'description': 'Yüksek protein, düşük kalorili besinler:',
+                    'foods': weight_loss_foods,
+                    'icon': '💪'
+                })
+        elif 'alma' in goal or 'gain' in goal:
+            # Yüksek kalorili, yüksek protein besinler
+            cursor.execute('''
+                SELECT * FROM foods 
+                WHERE protein > 10 AND calories > 200 AND calories <= ?
+                ORDER BY calories DESC, protein DESC
+                LIMIT 5
+            ''', (min(remaining_calories, 800),))
+            weight_gain_foods = [dict(row) for row in cursor.fetchall()]
+            if weight_gain_foods:
+                recommendations.append({
+                    'type': 'weight_gain',
+                    'title': '📈 Kilo Alma İçin Öneriler',
+                    'description': 'Yüksek kalorili, protein içeren besinler:',
+                    'foods': weight_gain_foods,
+                    'icon': '📈'
+                })
+        
+        conn.close()
+        
+        return jsonify({
+            'recommendations': recommendations,
+            'remaining': {
+                'calories': remaining_calories,
+                'protein': remaining_protein,
+                'carbs': remaining_carbs,
+                'fat': remaining_fat
+            }
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/recipes', methods=['GET'])
+@jwt_required()
+def get_recipes():
+    """Tarif listesi - kullanıcı hedefine göre filtreleme"""
+    try:
+        user_id = get_jwt_identity()
+        goal = request.args.get('goal', None)
+        category = request.args.get('category', None)
+        limit = int(request.args.get('limit', 20))
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Kullanıcı hedefini al (eğer goal parametresi verilmediyse)
+        if not goal:
+            cursor.execute('SELECT goal FROM users WHERE id = ?', (user_id,))
+            user = cursor.fetchone()
+            if user:
+                goal = user['goal']
+        
+        # Tarifleri filtrele
+        query = 'SELECT * FROM recipes WHERE 1=1'
+        params = []
+        
+        if goal:
+            # Goal'a göre filtrele (kilo verme, kilo alma, kilo koruma)
+            if 'verme' in goal.lower() or 'loss' in goal.lower():
+                query += ' AND (goal = ? OR goal = ? OR goal IS NULL)'
+                params.extend(['kilo verme', 'weight loss'])
+            elif 'alma' in goal.lower() or 'gain' in goal.lower():
+                query += ' AND (goal = ? OR goal = ? OR goal IS NULL)'
+                params.extend(['kilo alma', 'weight gain'])
+            else:
+                query += ' AND (goal = ? OR goal = ? OR goal IS NULL)'
+                params.extend(['kilo koruma', 'maintenance'])
+        
+        if category:
+            query += ' AND category = ?'
+            params.append(category)
+        
+        query += ' ORDER BY created_at DESC LIMIT ?'
+        params.append(limit)
+        
+        cursor.execute(query, params)
+        recipes = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify({'recipes': recipes}), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
+@jwt_required()
+def get_recipe(recipe_id):
+    """Tarif detayı"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM recipes WHERE id = ?', (recipe_id,))
+        recipe = cursor.fetchone()
+        conn.close()
+        
+        if not recipe:
+            return jsonify({'error': 'Tarif bulunamadı'}), 404
+        
+        return jsonify({'recipe': dict(recipe)}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1323,6 +1708,96 @@ def admin_update_user(user_id):
             conn.close()
             return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
         
+        # Validation
+        # Email validation (eğer email güncelleniyorsa)
+        if 'email' in data:
+            email = data['email'].strip().lower()
+            if not email or '@' not in email:
+                conn.close()
+                return jsonify({'error': 'Geçersiz email adresi'}), 400
+            
+            # Email zaten kullanılıyor mu? (başka bir kullanıcı tarafından)
+            cursor.execute('SELECT id FROM users WHERE email = ? AND id != ?', (email, user_id))
+            if cursor.fetchone():
+                conn.close()
+                return jsonify({'error': 'Bu email zaten kullanılıyor'}), 400
+        
+        # Yaş validation
+        if 'age' in data:
+            age = data['age']
+            if age is not None:
+                try:
+                    age = int(age)
+                    if age < 1 or age > 150:
+                        conn.close()
+                        return jsonify({'error': 'Yaş 1-150 arasında olmalıdır'}), 400
+                except (ValueError, TypeError):
+                    conn.close()
+                    return jsonify({'error': 'Geçersiz yaş değeri'}), 400
+        
+        # Boy validation
+        if 'height' in data:
+            height = data['height']
+            if height is not None:
+                try:
+                    height = float(height)
+                    if height < 50 or height > 250:
+                        conn.close()
+                        return jsonify({'error': 'Boy 50-250 cm arasında olmalıdır'}), 400
+                except (ValueError, TypeError):
+                    conn.close()
+                    return jsonify({'error': 'Geçersiz boy değeri'}), 400
+        
+        # Kilo validation
+        if 'weight' in data:
+            weight = data['weight']
+            if weight is not None:
+                try:
+                    weight = float(weight)
+                    if weight < 20 or weight > 500:
+                        conn.close()
+                        return jsonify({'error': 'Kilo 20-500 kg arasında olmalıdır'}), 400
+                except (ValueError, TypeError):
+                    conn.close()
+                    return jsonify({'error': 'Geçersiz kilo değeri'}), 400
+        
+        # Hedef kilo validation
+        if 'target_weight' in data:
+            target_weight = data['target_weight']
+            if target_weight is not None:
+                try:
+                    target_weight = float(target_weight)
+                    if target_weight < 20 or target_weight > 500:
+                        conn.close()
+                        return jsonify({'error': 'Hedef kilo 20-500 kg arasında olmalıdır'}), 400
+                except (ValueError, TypeError):
+                    conn.close()
+                    return jsonify({'error': 'Geçersiz hedef kilo değeri'}), 400
+        
+        # Cinsiyet validation
+        if 'gender' in data:
+            gender = data['gender']
+            if gender and gender not in ['erkek', 'kadın', 'male', 'female']:
+                conn.close()
+                return jsonify({'error': 'Geçersiz cinsiyet değeri'}), 400
+        
+        # Aktivite seviyesi validation
+        if 'activity_level' in data:
+            activity_level = data['activity_level']
+            valid_levels = ['sedentary', 'light', 'moderate', 'active', 'very_active',
+                           'hareketsiz', 'az aktif', 'aktif', 'çok aktif', 'aşırı aktif']
+            if activity_level and activity_level.lower() not in [l.lower() for l in valid_levels]:
+                conn.close()
+                return jsonify({'error': 'Geçersiz aktivite seviyesi'}), 400
+        
+        # Hedef validation
+        if 'goal' in data:
+            goal = data['goal']
+            valid_goals = ['kilo verme', 'kilo alma', 'kilo koruma', 'weight loss', 'weight gain', 'maintenance']
+            if goal and goal.lower() not in [g.lower() for g in valid_goals]:
+                conn.close()
+                return jsonify({'error': 'Geçersiz hedef değeri'}), 400
+        
         # Güncellenecek alanları belirle
         updates = []
         params = []
@@ -1336,36 +1811,39 @@ def admin_update_user(user_id):
         new_goal = data.get('goal', current_user['goal'])
         
         # Güncellenecek alanları ekle
+        if 'email' in data:
+            updates.append('email = ?')
+            params.append(data['email'].strip().lower())
         if 'name' in data:
             updates.append('name = ?')
-            params.append(data['name'])
+            params.append(data['name'].strip() if data['name'] else None)
         if 'age' in data:
             updates.append('age = ?')
-            params.append(data['age'])
-            new_age = data['age']
+            params.append(int(data['age']) if data['age'] else None)
+            new_age = int(data['age']) if data['age'] else None
         if 'gender' in data:
             updates.append('gender = ?')
-            params.append(data['gender'])
-            new_gender = data['gender']
+            params.append(data['gender'] if data['gender'] else None)
+            new_gender = data['gender'] if data['gender'] else None
         if 'height' in data:
             updates.append('height = ?')
-            params.append(data['height'])
-            new_height = data['height']
+            params.append(float(data['height']) if data['height'] else None)
+            new_height = float(data['height']) if data['height'] else None
         if 'weight' in data:
             updates.append('weight = ?')
-            params.append(data['weight'])
-            new_weight = data['weight']
+            params.append(float(data['weight']) if data['weight'] else None)
+            new_weight = float(data['weight']) if data['weight'] else None
         if 'target_weight' in data:
             updates.append('target_weight = ?')
-            params.append(data['target_weight'])
+            params.append(float(data['target_weight']) if data['target_weight'] else None)
         if 'activity_level' in data:
             updates.append('activity_level = ?')
-            params.append(data['activity_level'])
-            new_activity_level = data['activity_level']
+            params.append(data['activity_level'] if data['activity_level'] else None)
+            new_activity_level = data['activity_level'] if data['activity_level'] else None
         if 'goal' in data:
             updates.append('goal = ?')
-            params.append(data['goal'])
-            new_goal = data['goal']
+            params.append(data['goal'] if data['goal'] else None)
+            new_goal = data['goal'] if data['goal'] else None
         
         # BMR ve TDEE'yi yeniden hesapla (kilo, boy, yaş, cinsiyet veya aktivite seviyesi değiştiyse)
         needs_recalculation = ('weight' in data or 'height' in data or 'age' in data or 
@@ -1374,8 +1852,10 @@ def admin_update_user(user_id):
         if needs_recalculation:
             if new_weight and new_height and new_age and new_gender:
                 bmr = calculate_bmr(new_weight, new_height, new_age, new_gender)
-                tdee = calculate_tdee(bmr, new_activity_level)
-                macros = calculate_macros(tdee, new_goal, new_weight)
+                activity_level_str = new_activity_level if new_activity_level else 'sedentary'
+                tdee = calculate_tdee(bmr, activity_level_str)
+                goal_str = new_goal if new_goal else 'kilo koruma'
+                macros = calculate_macros(tdee, goal_str, new_weight)
                 updates.append('bmr = ?')
                 params.append(bmr)
                 updates.append('tdee = ?')
@@ -1393,7 +1873,8 @@ def admin_update_user(user_id):
             current_tdee = current_user['tdee'] if current_user['tdee'] else 0
             current_weight = current_user['weight'] if current_user['weight'] else new_weight
             if current_tdee and current_weight:
-                macros = calculate_macros(current_tdee, new_goal, current_weight)
+                goal_str = new_goal if new_goal else 'kilo koruma'
+                macros = calculate_macros(current_tdee, goal_str, current_weight)
                 updates.append('daily_calories = ?')
                 params.append(macros['daily_calories'])
                 updates.append('daily_protein = ?')
@@ -1418,6 +1899,51 @@ def admin_update_user(user_id):
         return jsonify({'message': 'Kullanıcı güncellendi'}), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/users/<int:user_id>/password', methods=['PUT'])
+@jwt_required()
+def admin_update_user_password(user_id):
+    """Kullanıcı şifresini güncelle (admin)"""
+    try:
+        admin_id = get_jwt_identity()
+        if not is_admin(admin_id):
+            return jsonify({'error': 'Yetkisiz erişim'}), 403
+        
+        data = request.json
+        new_password = data.get('password')
+        
+        if not new_password:
+            return jsonify({'error': 'Şifre gerekli'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'error': 'Şifre en az 6 karakter olmalıdır'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Kullanıcıyı kontrol et
+        cursor.execute('SELECT id FROM users WHERE id = ? AND is_admin = 0', (user_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
+        
+        # Şifreyi hashle
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Şifreyi güncelle
+        cursor.execute('UPDATE users SET password = ? WHERE id = ?', (hashed_password, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Şifre güncellendi'}), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])

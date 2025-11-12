@@ -39,6 +39,19 @@ CORS(app, origins=cors_origins if isinstance(cors_origins, list) else '*',
 
 jwt = JWTManager(app)
 
+# JWT Error Handlers - Daha anlamlı hata mesajları için
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({'error': 'Token süresi dolmuş, lütfen tekrar giriş yapın'}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    return jsonify({'error': 'Geçersiz token, lütfen tekrar giriş yapın'}), 401
+
+@jwt.unauthorized_loader
+def missing_token_callback(error):
+    return jsonify({'error': 'Token bulunamadı, lütfen giriş yapın'}), 401
+
 # Veritabanı bağlantısı
 # Hosting için mutlak yol veya environment variable kullan
 # Render.com için: DB_PATH environment variable'ını kullan veya default path

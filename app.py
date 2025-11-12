@@ -1865,50 +1865,102 @@ if __name__ == '__main__':
     # Admin paneli için static dosya servisi
     # Render.com için: admin klasörü backend klasörü içinde olmalı
     # Önce backend/admin dizinini kontrol et (Render.com için)
-    admin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'admin'))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    admin_dir = os.path.join(current_dir, 'admin')
+    
+    # Eğer backend/admin yoksa, bir üst dizindeki admin'i kontrol et (local için)
     if not os.path.exists(admin_dir):
-        # Eğer backend/admin yoksa, bir üst dizindeki admin'i kontrol et (local için)
-        admin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'admin'))
-    if not os.path.exists(admin_dir):
-        # Eğer hala yoksa, mevcut dizindeki admin'i kontrol et
-        admin_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'admin'))
+        parent_dir = os.path.dirname(current_dir)
+        admin_dir = os.path.join(parent_dir, 'admin')
+    
+    # Mutlak yola çevir
+    admin_dir = os.path.abspath(admin_dir)
+    
+    print("=" * 60)
+    print("ADMIN PANEL KONTROL")
+    print("=" * 60)
+    print(f"Mevcut dizin: {current_dir}")
     print(f"Admin dizini: {admin_dir}")
     print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+    
     if os.path.exists(admin_dir):
         files = os.listdir(admin_dir)
         print(f"Admin dizinindeki dosyalar: {files}")
+        if 'index.html' in files:
+            print("✅ index.html bulundu!")
+        else:
+            print("❌ index.html BULUNAMADI!")
+        if 'app.js' in files:
+            print("✅ app.js bulundu!")
+        else:
+            print("❌ app.js BULUNAMADI!")
     else:
-        print(f"⚠️  UYARI: Admin dizini bulunamadı! Admin paneli çalışmayabilir.")
+        print(f"❌ UYARI: Admin dizini bulunamadı!")
         print(f"   Kontrol edilen yollar:")
-        print(f"   1. {os.path.abspath(os.path.join(os.path.dirname(__file__), 'admin'))}")
-        print(f"   2. {os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'admin'))}")
-        print(f"   3. {os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'admin'))}")
+        print(f"   1. {os.path.join(current_dir, 'admin')}")
+        print(f"   2. {os.path.join(os.path.dirname(current_dir), 'admin')}")
+    print("=" * 60)
     
     @app.route('/admin')
     def admin_index():
         """Admin paneli ana sayfası"""
         try:
+            print(f"Admin index isteği alındı. Admin dizini: {admin_dir}")
+            print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+            
             if not os.path.exists(admin_dir):
-                return f"Admin dizini bulunamadı: {admin_dir}", 404
+                error_msg = f"Admin dizini bulunamadı: {admin_dir}"
+                print(f"ERROR: {error_msg}")
+                return jsonify({'error': error_msg}), 404
+            
             index_path = os.path.join(admin_dir, 'index.html')
+            print(f"Index.html yolu: {index_path}")
+            print(f"Index.html mevcut mu: {os.path.exists(index_path)}")
+            
             if not os.path.exists(index_path):
-                return f"index.html bulunamadı: {index_path}", 404
-            return send_from_directory(admin_dir, 'index.html')
+                error_msg = f"index.html bulunamadı: {index_path}"
+                print(f"ERROR: {error_msg}")
+                # Admin dizinindeki dosyaları listele
+                if os.path.exists(admin_dir):
+                    files = os.listdir(admin_dir)
+                    print(f"Admin dizinindeki dosyalar: {files}")
+                return jsonify({'error': error_msg}), 404
+            
+            print(f"Admin index.html gönderiliyor...")
+            return send_from_directory(admin_dir, 'index.html', mimetype='text/html')
         except Exception as e:
-            print(f"Admin index hatası: {e}")
+            error_msg = f"Admin index hatası: {str(e)}"
+            print(f"ERROR: {error_msg}")
             import traceback
             traceback.print_exc()
-            return f"Admin paneli hatası: {str(e)}", 404
+            return jsonify({'error': error_msg}), 500
     
     @app.route('/admin/<path:filename>')
     def admin_static(filename):
         """Admin paneli static dosyaları (JS, CSS, vs.)"""
         try:
+            print(f"Admin static dosya isteği: {filename}")
+            print(f"Admin dizini: {admin_dir}")
+            print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
+            
             if not os.path.exists(admin_dir):
-                return f"Admin dizini bulunamadı: {admin_dir}", 404
+                error_msg = f"Admin dizini bulunamadı: {admin_dir}"
+                print(f"ERROR: {error_msg}")
+                return jsonify({'error': error_msg}), 404
+            
             file_path = os.path.join(admin_dir, filename)
+            print(f"Dosya yolu: {file_path}")
+            print(f"Dosya mevcut mu: {os.path.exists(file_path)}")
+            
             if not os.path.exists(file_path):
-                return f"Dosya bulunamadı: {file_path}", 404
+                # Admin dizinindeki dosyaları listele
+                if os.path.exists(admin_dir):
+                    files = os.listdir(admin_dir)
+                    print(f"Admin dizinindeki dosyalar: {files}")
+                error_msg = f"Dosya bulunamadı: {filename} (yol: {file_path})"
+                print(f"ERROR: {error_msg}")
+                return jsonify({'error': error_msg}), 404
+            
             # MIME type belirle
             if filename.endswith('.js'):
                 mimetype = 'application/javascript'
@@ -1916,14 +1968,25 @@ if __name__ == '__main__':
                 mimetype = 'text/css'
             elif filename.endswith('.html'):
                 mimetype = 'text/html'
+            elif filename.endswith('.json'):
+                mimetype = 'application/json'
+            elif filename.endswith('.png'):
+                mimetype = 'image/png'
+            elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+                mimetype = 'image/jpeg'
+            elif filename.endswith('.svg'):
+                mimetype = 'image/svg+xml'
             else:
                 mimetype = None
+            
+            print(f"Dosya gönderiliyor: {filename} (mimetype: {mimetype})")
             return send_from_directory(admin_dir, filename, mimetype=mimetype)
         except Exception as e:
-            print(f"Admin static dosya hatası: {e}, dosya: {filename}")
+            error_msg = f"Admin static dosya hatası: {str(e)}, dosya: {filename}"
+            print(f"ERROR: {error_msg}")
             import traceback
             traceback.print_exc()
-            return f"Dosya hatası: {str(e)}", 404
+            return jsonify({'error': error_msg}), 500
     
         # Production modu kontrolü
         # Render.com için: FLASK_DEBUG = False (production)

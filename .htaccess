@@ -1,0 +1,26 @@
+# Python uygulaması için .htaccess
+# Not: Bu dosya sadece Apache + mod_wsgi veya FastCGI kullanan hosting'ler için
+
+# Python uygulamasını çalıştır
+Options +ExecCGI
+AddHandler cgi-script .py
+
+# Rewrite rules
+RewriteEngine On
+RewriteBase /
+
+# API isteklerini app.py'ye yönlendir
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ app.py/$1 [L,QSA]
+
+# Admin paneli için
+RewriteRule ^admin/?$ app.py/admin [L,QSA]
+RewriteRule ^admin/(.*)$ app.py/admin/$1 [L,QSA]
+
+# Python path
+SetEnv PYTHONPATH /path/to/your/backend
+
+# Error handling
+ErrorDocument 500 "Internal Server Error - Python uygulaması çalışmıyor"
+

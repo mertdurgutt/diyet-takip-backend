@@ -1863,15 +1863,26 @@ if __name__ == '__main__':
         print(f"Ornek besin ekleme hatasi: {e}")
     
     # Admin paneli için static dosya servisi
-    # Önce admin dizinini bul
-    admin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'admin'))
+    # Render.com için: admin klasörü backend klasörü içinde olmalı
+    # Önce backend/admin dizinini kontrol et (Render.com için)
+    admin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'admin'))
     if not os.path.exists(admin_dir):
-        admin_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'admin'))
+        # Eğer backend/admin yoksa, bir üst dizindeki admin'i kontrol et (local için)
+        admin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'admin'))
+    if not os.path.exists(admin_dir):
+        # Eğer hala yoksa, mevcut dizindeki admin'i kontrol et
+        admin_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'admin'))
     print(f"Admin dizini: {admin_dir}")
     print(f"Admin dizini mevcut mu: {os.path.exists(admin_dir)}")
     if os.path.exists(admin_dir):
         files = os.listdir(admin_dir)
         print(f"Admin dizinindeki dosyalar: {files}")
+    else:
+        print(f"⚠️  UYARI: Admin dizini bulunamadı! Admin paneli çalışmayabilir.")
+        print(f"   Kontrol edilen yollar:")
+        print(f"   1. {os.path.abspath(os.path.join(os.path.dirname(__file__), 'admin'))}")
+        print(f"   2. {os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'admin'))}")
+        print(f"   3. {os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'admin'))}")
     
     @app.route('/admin')
     def admin_index():
